@@ -145,7 +145,7 @@ const ALL_SITE_IDS = SITE_CATEGORIES.flatMap((cat) =>
 export default function Home() {
   const [keyword, setKeyword] = useState("");
   const [selectedSites, setSelectedSites] = useState<Set<string>>(
-    new Set(["amazon", "rakuten", "yahoo_shopping", "yodobashi", "mercari"])
+    new Set(["amazon", "rakuten", "yahoo_shopping"])
   );
 
   const isAllSelected = selectedSites.size === ALL_SITE_IDS.length;
