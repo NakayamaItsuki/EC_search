@@ -3,14 +3,14 @@
 import { useState, FormEvent } from "react";
 import {
   Search,
-  ShoppingBag,
-  Monitor,
-  Gavel,
+  Star,
+  Clock,
   ExternalLink,
   CheckSquare,
   Square,
 } from "lucide-react";
 import clsx from "clsx";
+import Encoding from "encoding-japanese";
 
 // サイト定義の型
 type Site = {
@@ -19,6 +19,7 @@ type Site = {
   urlTemplate: string;
   color: string;
   domain: string; // Favicon取得用ドメイン
+  encoding?: "shift_jis" | "utf-8"; // エンコーディングタイプ（デフォルトはutf-8）
 };
 
 type Category = {
@@ -31,9 +32,9 @@ type Category = {
 // サイトデータ定義
 const SITE_CATEGORIES: Category[] = [
   {
-    id: "general",
-    title: "総合通販・価格比較",
-    icon: ShoppingBag,
+    id: "frequent",
+    title: "よく使う",
+    icon: Star,
     sites: [
       {
         id: "amazon",
@@ -59,17 +60,10 @@ const SITE_CATEGORIES: Category[] = [
       {
         id: "kakaku",
         name: "価格.com",
-        urlTemplate: "https://kakaku.com/search_results/{keyword}/",
+        urlTemplate: "https://search.kakaku.com/{keyword}/",
         color: "text-blue-700",
         domain: "kakaku.com",
       },
-    ],
-  },
-  {
-    id: "electronics",
-    title: "家電量販店",
-    icon: Monitor,
-    sites: [
       {
         id: "yodobashi",
         name: "ヨドバシ.com",
@@ -83,13 +77,36 @@ const SITE_CATEGORIES: Category[] = [
         urlTemplate: "https://www.biccamera.com/bc/category/?q={keyword}",
         color: "text-red-600",
         domain: "www.biccamera.com",
+        encoding: "shift_jis",
       },
+      {
+        id: "mercari",
+        name: "メルカリ",
+        urlTemplate: "https://jp.mercari.com/search?keyword={keyword}",
+        color: "text-red-500",
+        domain: "jp.mercari.com",
+      },
+      {
+        id: "yahoo_fleamarket",
+        name: "Yahoo!フリマ",
+        urlTemplate: "https://paypayfleamarket.yahoo.co.jp/search/{keyword}",
+        color: "text-red-500",
+        domain: "paypayfleamarket.yahoo.co.jp",
+      },
+    ],
+  },
+  {
+    id: "occasional",
+    title: "たまに使う",
+    icon: Clock,
+    sites: [
       {
         id: "joshin",
         name: "Joshin web",
-        urlTemplate: "https://joshinweb.jp/search/result.html?KEYWORD={keyword}",
+        urlTemplate: "https://joshinweb.jp/srhzs.html?KEYWORD=&KEY=ZS_ALL&KEY_M=ALL&QS=&QK={keyword}&category_id=&REQUEST_CODE=1",
         color: "text-red-500",
         domain: "joshinweb.jp",
+        encoding: "shift_jis",
       },
       {
         id: "edion",
@@ -98,19 +115,20 @@ const SITE_CATEGORIES: Category[] = [
         color: "text-blue-600",
         domain: "www.edion.com",
       },
-    ],
-  },
-  {
-    id: "flea",
-    title: "フリマ・オークション",
-    icon: Gavel,
-    sites: [
       {
-        id: "mercari",
-        name: "メルカリ",
-        urlTemplate: "https://jp.mercari.com/search?keyword={keyword}",
-        color: "text-red-500",
-        domain: "jp.mercari.com",
+        id: "yamada",
+        name: "ヤマダウェブコム",
+        urlTemplate: "https://www.yamada-denkiweb.com/search/{keyword}/",
+        color: "text-green-600",
+        domain: "www.yamada-denkiweb.com",
+      },
+      {
+        id: "irisplaza",
+        name: "アイリスプラザ",
+        urlTemplate: "https://www.irisplaza.co.jp/index.php?KB=SEARCH&itemnm={keyword}",
+        color: "text-orange-500",
+        domain: "www.irisplaza.co.jp",
+        encoding: "shift_jis",
       },
       {
         id: "rakuma",
@@ -126,13 +144,6 @@ const SITE_CATEGORIES: Category[] = [
         color: "text-yellow-600",
         domain: "auctions.yahoo.co.jp",
       },
-      {
-        id: "yahoo_fleamarket",
-        name: "Yahoo!フリマ",
-        urlTemplate: "https://paypayfleamarket.yahoo.co.jp/search/{keyword}",
-        color: "text-red-500",
-        domain: "paypayfleamarket.yahoo.co.jp",
-      },
     ],
   },
 ];
@@ -145,7 +156,7 @@ const ALL_SITE_IDS = SITE_CATEGORIES.flatMap((cat) =>
 export default function Home() {
   const [keyword, setKeyword] = useState("");
   const [selectedSites, setSelectedSites] = useState<Set<string>>(
-    new Set(["amazon", "rakuten", "yahoo_shopping"])
+    new Set(["amazon", "rakuten", "yahoo_shopping", "kakaku", "yodobashi", "biccamera", "mercari", "yahoo_fleamarket"])
   );
 
   const isAllSelected = selectedSites.size === ALL_SITE_IDS.length;
@@ -187,16 +198,37 @@ export default function Home() {
     if (!keyword.trim()) return;
 
     const sitesToSearch = ALL_SITE_IDS.filter((id) => selectedSites.has(id));
-    
+
     // 各サイトの定義を探して開く
     sitesToSearch.forEach((id) => {
-      const category = SITE_CATEGORIES.find((cat) => 
+      const category = SITE_CATEGORIES.find((cat) =>
         cat.sites.some((s) => s.id === id)
       );
       const site = category?.sites.find((s) => s.id === id);
-      
+
       if (site) {
-        const url = site.urlTemplate.replace("{keyword}", encodeURIComponent(keyword));
+        let encodedKeyword: string;
+
+        // エンコーディングタイプに応じて処理
+        if (site.encoding === "shift_jis") {
+          // Shift_JISエンコーディング
+          const unicodeArray = [];
+          for (let i = 0; i < keyword.length; i++) {
+            unicodeArray.push(keyword.charCodeAt(i));
+          }
+          const sjisArray = Encoding.convert(unicodeArray, {
+            to: "SJIS",
+            from: "UNICODE",
+          });
+          encodedKeyword = sjisArray
+            .map((code: number) => "%" + ("0" + code.toString(16)).slice(-2).toUpperCase())
+            .join("");
+        } else {
+          // UTF-8エンコーディング（デフォルト）
+          encodedKeyword = encodeURIComponent(keyword);
+        }
+
+        const url = site.urlTemplate.replace("{keyword}", encodedKeyword);
         window.open(url, "_blank");
       }
     });
@@ -257,7 +289,7 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {SITE_CATEGORIES.map((category) => {
                 const categorySiteIds = category.sites.map((s) => s.id);
                 const isCategoryAllSelected = categorySiteIds.every((id) =>

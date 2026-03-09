@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ECサイト横断検索 - Amazon, 楽天, Yahoo, メルカリなどを一括比較",
   description: "ワンクリックでAmazon, 楽天, Yahoo!ショッピング, メルカリなどのECサイトを横断検索できるツールです。",
+  openGraph: {
+    title: "ECサイト横断検索",
+    description: "ワンクリックでAmazon, 楽天, Yahoo!ショッピング, メルカリなどのECサイトを横断検索できるツールです。",
+    locale: "ja_JP",
+  },
 };
 
 export default function RootLayout({
